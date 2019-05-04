@@ -78,7 +78,6 @@ void ClientSocket::Disconnect ()
     int returnCode = shutdown (cSocket_, SD_BOTH);
     if (returnCode == SOCKET_ERROR)
     {
-        // TODO: What about noexcept?!
         throw UniversalException <Exceptions::UnableToDisconnect> (std::string (__FILE__) + ":" +
             std::to_string (__LINE__) + "    Unable disconnect socket! Code: " +
             std::to_string (returnCode) + ".");
