@@ -12,8 +12,9 @@ public:
     virtual ~ClientSocket ();
 
     void Disconnect ();
-    void Receive (InputMessageBuffer &message);
-    void Send (const OutputMessageBuffer &message);
+    bool AnyDataReceived () const;
+    int Receive (InputMessageBuffer &message);
+    int Send (const OutputMessageBuffer &message);
 
     class Exceptions
     {

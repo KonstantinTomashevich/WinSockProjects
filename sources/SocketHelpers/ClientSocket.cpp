@@ -84,7 +84,19 @@ void ClientSocket::Disconnect ()
     }
 }
 
-void ClientSocket::Receive (InputMessageBuffer &message)
+bool ClientSocket::AnyDataReceived () const
+{
+    fd_set readSet;
+    FD_ZERO(&readSet);
+    FD_SET(cSocket_, &readSet);
+
+    timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+    return select (cSocket_, &readSet, NULL, NULL, &timeout) > 0;
+}
+
+int ClientSocket::Receive (InputMessageBuffer &message)
 {
     int resultCode = recv (cSocket_, message.GetCBuffer (), message.GetMaximumSize (), 0);
     if (resultCode == SOCKET_ERROR)
@@ -93,9 +105,11 @@ void ClientSocket::Receive (InputMessageBuffer &message)
             std::to_string (__LINE__) + "    Error during receive! Error: " +
             std::to_string (WSAGetLastError ()) + ".");
     }
+
+    return resultCode;
 }
 
-void ClientSocket::Send (const OutputMessageBuffer &message)
+int ClientSocket::Send (const OutputMessageBuffer &message)
 {
     int resultCode = send (cSocket_, message.GetConstCBuffer (), message.GetSize (), 0);
     if (resultCode == SOCKET_ERROR)
@@ -104,4 +118,6 @@ void ClientSocket::Send (const OutputMessageBuffer &message)
             std::to_string (__LINE__) + "    Error during send! Error: " +
             std::to_string (WSAGetLastError ()) + ".");
     }
+    
+    return resultCode;
 }
