@@ -70,6 +70,11 @@ ClientSocket::ClientSocket (SOCKET cSocket)
 
 ClientSocket::~ClientSocket ()
 {
+    closesocket (cSocket_);
+}
+
+void ClientSocket::Disconnect ()
+{
     int returnCode = shutdown (cSocket_, SD_BOTH);
     if (returnCode == SOCKET_ERROR)
     {
@@ -78,6 +83,26 @@ ClientSocket::~ClientSocket ()
             std::to_string (__LINE__) + "    Unable disconnect socket! Code: " +
             std::to_string (returnCode) + ".");
     }
+}
 
-    closesocket (cSocket_);
+void ClientSocket::Receive (InputMessageBuffer &message)
+{
+    int resultCode = recv (cSocket_, message.GetCBuffer (), message.GetMaximumSize (), 0);
+    if (resultCode == SOCKET_ERROR)
+    {
+        throw UniversalException <Exceptions::ErrorDuringReceive> (std::string (__FILE__) + ":" +
+            std::to_string (__LINE__) + "    Error during receive! Error: " +
+            std::to_string (WSAGetLastError ()) + ".");
+    }
+}
+
+void ClientSocket::Send (const OutputMessageBuffer &message)
+{
+    int resultCode = send (cSocket_, message.GetConstCBuffer (), message.GetSize (), 0);
+    if (resultCode == SOCKET_ERROR)
+    {
+        throw UniversalException <Exceptions::ErrorDuringSend> (std::string (__FILE__) + ":" +
+            std::to_string (__LINE__) + "    Error during send! Error: " +
+            std::to_string (WSAGetLastError ()) + ".");
+    }
 }

@@ -1,13 +1,19 @@
 #pragma once
 #include <winsock2.h>
 #include <string>
+#include "InputMessageBuffer.hpp"
+#include "OutputMessageBuffer.hpp"
 
 class ClientSocket
 {
 public:
-    explicit ClientSocket (const std::string &serverNode, const std::string &serverName);
+    ClientSocket (const std::string &serverNode, const std::string &serverName);
     explicit ClientSocket (SOCKET cSocket);
     virtual ~ClientSocket ();
+
+    void Disconnect ();
+    void Receive (InputMessageBuffer &message);
+    void Send (const OutputMessageBuffer &message);
 
     class Exceptions
     {
@@ -16,6 +22,8 @@ public:
         class UnableToCreateCSocket;
         class UnableToConnect;
         class UnableToDisconnect;
+        class ErrorDuringReceive;
+        class ErrorDuringSend;
     };
 
 protected:
