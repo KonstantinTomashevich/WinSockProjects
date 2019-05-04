@@ -11,7 +11,11 @@ int main ()
     std::set_terminate (CustomTerminate);
     Init::LoadWindowsSocketLibrary ();
 
-    ClientSocket *socket = new ClientSocket ("localhost", SERVER_NAME);
+    std::string server;
+    std::cout << "Input server host: ";
+    std::cin >> server;
+
+    ClientSocket *socket = new ClientSocket (server, SERVER_NAME);
     Sleep (2000);
 
     {
