@@ -1,1 +1,1 @@
-add_library(SocketHelpers STATIC ClientSocket.cpp ClientSocket.hpp ServerSocket.cpp ServerSocket.hpp Init.cpp Init.hpp InputMessageBuffer.cpp InputMessageBuffer.hpp)
+add_library(SocketHelpers STATIC ClientSocket.cpp ClientSocket.hpp ServerSocket.cpp ServerSocket.hpp Init.cpp Init.hpp InputMessageBuffer.cpp InputMessageBuffer.hpp OutputMessageBuffer.cpp OutputMessageBuffer.hpp)
