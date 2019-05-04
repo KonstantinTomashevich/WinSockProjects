@@ -11,6 +11,7 @@ public:
 
     void Disconnect ();
     ClientSocket *WaitForNextClient ();
+    ClientSocket *WaitForNextClientNonBlocking ();
 
     class Exceptions
     {
