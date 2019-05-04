@@ -35,8 +35,8 @@ ServerSocket::ServerSocket (const std::string &serverName)
             std::to_string (returnCode) + ".");
     }
 
-    SOCKET serverSocket = socket (resultAddress->ai_family, resultAddress->ai_socktype, resultAddress->ai_protocol);
-    if (serverSocket == INVALID_SOCKET)
+    cSocket_ = socket (resultAddress->ai_family, resultAddress->ai_socktype, resultAddress->ai_protocol);
+    if (cSocket_ == INVALID_SOCKET)
     {
         freeaddrinfo (resultAddress);
         throw UniversalException <Exceptions::UnableToCreateCSocket> (std::string (__FILE__) + ":" +
@@ -44,7 +44,7 @@ ServerSocket::ServerSocket (const std::string &serverName)
             std::to_string (WSAGetLastError ()) + ".");
     }
 
-    returnCode = bind (serverSocket, resultAddress->ai_addr, (int) resultAddress->ai_addrlen);
+    returnCode = bind (cSocket_, resultAddress->ai_addr, (int) resultAddress->ai_addrlen);
     freeaddrinfo (resultAddress);
 
     if (returnCode == SOCKET_ERROR)
