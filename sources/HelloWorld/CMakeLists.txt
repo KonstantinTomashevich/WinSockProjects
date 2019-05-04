@@ -1,0 +1,5 @@
+add_executable(HelloWorldServer Server.cpp)
+add_executable(HelloWorldClient Client.cpp)
+
+target_link_libraries(HelloWorldServer SocketHelpers)
+target_link_libraries(HelloWorldClient SocketHelpers)
