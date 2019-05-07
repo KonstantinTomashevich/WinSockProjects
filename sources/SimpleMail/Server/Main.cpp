@@ -46,7 +46,10 @@ DWORD WINAPI ClientThread (LPVOID param)
         if (client->AnyDataReceived ())
         {
             InputMessageBuffer inMessage (MAX_MESSAGE_SIZE);
-            client->Receive (inMessage);
+            if (client->Receive (inMessage) == 0)
+            {
+                break;
+            }
 
             int code = inMessage.NextInt ();
             switch (code)
@@ -91,7 +94,15 @@ DWORD WINAPI ClientThread (LPVOID param)
         }
     }
 
-    client->Disconnect ();
+    try
+    {
+        client->Disconnect ();
+    }
+    catch (UniversalException <ClientSocket::Exceptions::UnableToDisconnect> &exception)
+    {
+        /* No action, client already disconnected */
+    }
+
     delete client;
     --_clientThreadsActive;
     return 0;
@@ -243,7 +254,6 @@ int main ()
     }
 
     while (_clientThreadsActive);
-    server->Disconnect ();
     delete server;
     Init::UnloadWindowsSocketLibrary ();
 
