@@ -66,8 +66,8 @@ void ServerSocket::Disconnect ()
     if (returnCode == SOCKET_ERROR)
     {
         throw UniversalException <Exceptions::UnableToDisconnect> (std::string (__FILE__) + ":" +
-            std::to_string (__LINE__) + "    Unable disconnect socket! Code: " +
-            std::to_string (returnCode) + ".");
+            std::to_string (__LINE__) + "    Unable disconnect socket! Error: " +
+            std::to_string (WSAGetLastError ()) + ".");
     }
 }
 
@@ -89,4 +89,37 @@ ClientSocket *ServerSocket::WaitForNextClient ()
     }
 
     return new ClientSocket (clientSocket);
+}
+
+ClientSocket *ServerSocket::WaitForNextClientNonBlocking ()
+{
+    if (listen (cSocket_, SOMAXCONN) == SOCKET_ERROR)
+    {
+        throw UniversalException <Exceptions::UnableToListen> (std::string (__FILE__) + ":" +
+            std::to_string (__LINE__) + "    Unable to listen to CSocket! Error: " +
+            std::to_string (WSAGetLastError ()) + ".");
+    }
+
+    fd_set readSet;
+    FD_ZERO(&readSet);
+    FD_SET(cSocket_, &readSet);
+
+    timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+
+    if (select (cSocket_, &readSet, NULL, NULL, &timeout) > 0)
+    {
+        SOCKET clientSocket = accept (cSocket_, NULL, NULL);
+        if (clientSocket == INVALID_SOCKET)
+        {
+            throw UniversalException <Exceptions::UnableToAccept> (std::string (__FILE__) + ":" +
+                std::to_string (__LINE__) + "    Unable to accept new connection! Error: " +
+                std::to_string (WSAGetLastError ()) + ".");
+        }
+
+        return new ClientSocket (clientSocket);
+    }
+
+    return nullptr;
 }
