@@ -22,6 +22,7 @@ std::unordered_map <std::string, Mail *> _mails;
 DWORD WINAPI ClientThread (LPVOID param);
 DWORD WINAPI AskShutdownThread (LPVOID param);
 
+bool ParseClientMessage (ClientSocket *client, Mail *&mail);
 void PrintUnknownMessageToCerr (int code);
 Mail *TryAuth (InputMessageBuffer &message);
 void RequestAuth (ClientSocket *client);
@@ -41,57 +42,21 @@ DWORD WINAPI ClientThread (LPVOID param)
     }
 
     Mail *mail = nullptr;
-    while (_working)
+    try
     {
-        if (client->AnyDataReceived ())
+        while (_working)
         {
-            InputMessageBuffer inMessage (MAX_MESSAGE_SIZE);
-            if (client->Receive (inMessage) == 0)
+            if (client->AnyDataReceived () && !ParseClientMessage (client, mail))
             {
                 break;
-            }
-
-            int code = inMessage.NextInt ();
-            switch (code)
-            {
-            case CTS_AUTH:
-
-                mail = TryAuth (inMessage);
-                if (mail)
-                { SendUnread (client, mail); }
-                else
-                { RequestAuth (client); }
-                break;
-
-            case CTS_PUSH_MESSAGE:
-
-                if (mail)
-                { ProceedWithMessage (client, inMessage, mail); }
-                else
-                { RequestAuth (client); }
-                break;
-
-            case CTS_REQUEST_POP:
-
-                if (mail)
-                { PopMessage (client, mail); }
-                else
-                { RequestAuth (client); }
-                break;
-
-            case CTS_REQUEST_UNREAD:
-
-                if (mail)
-                { SendUnread (client, mail); }
-                else
-                { RequestAuth (client); }
-                break;
-
-            default:
-
-                PrintUnknownMessageToCerr (code);
             }
         }
+    }
+    catch (AnyUniversalException &exception)
+    {
+        WaitForSingleObject (_cerrMutex, INFINITE);
+        std::cerr << exception.GetException () << std::endl;
+        ReleaseMutex (_cerrMutex);
     }
 
     try
@@ -114,6 +79,58 @@ DWORD WINAPI AskShutdownThread (LPVOID param)
     while (getc (stdin) != 'q');
     _working = false;
     return 0;
+}
+
+bool ParseClientMessage (ClientSocket *client, Mail *&mail)
+{
+    InputMessageBuffer inMessage (MAX_MESSAGE_SIZE);
+    if (client->Receive (inMessage) == 0)
+    {
+        return false;
+    }
+
+    int code = inMessage.NextInt ();
+    switch (code)
+    {
+    case CTS_AUTH:
+
+        mail = TryAuth (inMessage);
+        if (mail)
+        { SendUnread (client, mail); }
+        else
+        { RequestAuth (client); }
+        break;
+
+    case CTS_PUSH_MESSAGE:
+
+        if (mail)
+        { ProceedWithMessage (client, inMessage, mail); }
+        else
+        { RequestAuth (client); }
+        break;
+
+    case CTS_REQUEST_POP:
+
+        if (mail)
+        { PopMessage (client, mail); }
+        else
+        { RequestAuth (client); }
+        break;
+
+    case CTS_REQUEST_UNREAD:
+
+        if (mail)
+        { SendUnread (client, mail); }
+        else
+        { RequestAuth (client); }
+        break;
+
+    default:
+
+        PrintUnknownMessageToCerr (code);
+    }
+
+    return true;
 }
 
 void PrintUnknownMessageToCerr (int code)
@@ -235,28 +252,56 @@ void ProceedWithMessage (ClientSocket *client, InputMessageBuffer &inMessage, Ma
 
 int main ()
 {
+    bool successful = true;
     _registryMutex = CreateMutex (NULL, FALSE, NULL);
     _cerrMutex = CreateMutex (NULL, FALSE, NULL);
 
     std::set_terminate (CustomTerminate);
     Init::LoadWindowsSocketLibrary ();
 
-    ServerSocket *server = new ServerSocket (PORT_STRING);
-    CreateThread (NULL, 0, AskShutdownThread, NULL, 0, NULL);
-
-    while (_working)
+    ServerSocket *server = nullptr;
+    try
     {
-        ClientSocket *client = server->WaitForNextClientNonBlocking ();
-        if (client)
-        {
-            CreateThread (NULL, 0, ClientThread, (LPVOID) client, 0, NULL);
-        }
+        server = new ServerSocket (PORT_STRING);
+    }
+    catch (AnyUniversalException &exception)
+    {
+        WaitForSingleObject (_cerrMutex, INFINITE);
+        std::cerr << exception.GetException () << std::endl;
+        ReleaseMutex (_cerrMutex);
+        successful = false;
     }
 
-    while (_clientThreadsActive);
-    delete server;
-    Init::UnloadWindowsSocketLibrary ();
+    if (successful)
+    {
+        CreateThread (NULL, 0, AskShutdownThread, NULL, 0, NULL);
+        while (_working)
+        {
+            ClientSocket *client = nullptr;
+            try
+            {
+                client = server->WaitForNextClientNonBlocking ();
+            }
+            catch (AnyUniversalException &exception)
+            {
+                WaitForSingleObject (_cerrMutex, INFINITE);
+                std::cerr << exception.GetException () << std::endl;
+                ReleaseMutex (_cerrMutex);
+                successful = false;
+                break;
+            }
 
+            if (client)
+            {
+                CreateThread (NULL, 0, ClientThread, (LPVOID) client, 0, NULL);
+            }
+        }
+
+        while (_clientThreadsActive);
+        delete server;
+    }
+
+    Init::UnloadWindowsSocketLibrary ();
     for (auto &loginMailPair : _mails)
     {
         delete loginMailPair.second;
@@ -264,5 +309,5 @@ int main ()
 
     CloseHandle (_registryMutex);
     CloseHandle (_cerrMutex);
-    return 0;
+    return successful ? 0 : 1;
 }
