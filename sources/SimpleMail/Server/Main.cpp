@@ -36,7 +36,7 @@ DWORD WINAPI ClientThread (LPVOID param)
     auto *client = static_cast<ClientSocket *> (param);
 
     {
-        OutputMessageBuffer message (512);
+        OutputMessageBuffer message (MAX_MESSAGE_SIZE);
         message.WriteInt (STC_AUTH_REQUIRED);
         client->Send (message);
     }
@@ -166,14 +166,14 @@ Mail *TryAuth (InputMessageBuffer &message)
 
 void RequestAuth (ClientSocket *client)
 {
-    OutputMessageBuffer message (512);
+    OutputMessageBuffer message (MAX_MESSAGE_SIZE);
     message.WriteInt (STC_AUTH_REQUIRED);
     client->Send (message);
 }
 
 void SendUnread (ClientSocket *client, Mail *mail)
 {
-    OutputMessageBuffer message (512);
+    OutputMessageBuffer message (MAX_MESSAGE_SIZE);
     message.WriteInt (STC_UNREAD_COUNT);
     message.WriteInt (mail->GetMessagesCount ());
     client->Send (message);
@@ -181,7 +181,7 @@ void SendUnread (ClientSocket *client, Mail *mail)
 
 void PopMessage (ClientSocket *client, Mail *mail)
 {
-    OutputMessageBuffer message (512);
+    OutputMessageBuffer message (MAX_MESSAGE_SIZE);
     if (mail->GetMessagesCount () > 0)
     {
         const Mail::Message &mailMessage = mail->TopMessage ();
@@ -211,7 +211,7 @@ void PopMessage (ClientSocket *client, Mail *mail)
 
 void ProceedWithMessage (ClientSocket *client, InputMessageBuffer &inMessage, Mail *mail)
 {
-    OutputMessageBuffer message (512);
+    OutputMessageBuffer message (MAX_MESSAGE_SIZE);
     std::string toWhom = inMessage.NextString ();
     Mail::Message mailMessage;
 
